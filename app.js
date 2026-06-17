@@ -118,6 +118,9 @@ function loadBookingsFromStorage() {
       console.error('Error loading bookings from storage:', error);
     }
   }
+  
+  // Schedule reminders for all booked appointments
+  scheduleAllReminders();
 }
 
 /**
@@ -129,6 +132,199 @@ function saveBookingsToStorage() {
     bookingsToSave[date] = { booked: availableDays[date].booked };
   }
   localStorage.setItem('bookings', JSON.stringify(bookingsToSave));
+}
+
+/**
+ * Request notification permission from user
+ */
+function requestNotificationPermission() {
+  if ('Notification' in window && Notification.permission === 'default') {
+    Notification.requestPermission();
+  }
+}
+
+/**
+ * Convert time string (e.g., "1:00 PM") to 24-hour format
+ * @param {string} time - Time in format "H:MM AM/PM"
+ * @returns {object} { hours, minutes }
+ */
+function parseTime(time) {
+  const parts = time.match(/(\d+):(\d+)\s*(AM|PM)/i);
+  if (!parts) return null;
+  
+  let hours = parseInt(parts[1]);
+  const minutes = parseInt(parts[2]);
+  const meridiem = parts[3].toUpperCase();
+  
+  if (meridiem === 'PM' && hours !== 12) {
+    hours += 12;
+  } else if (meridiem === 'AM' && hours === 12) {
+    hours = 0;
+  }
+  
+  return { hours, minutes };
+}
+
+/**
+ * Parse date string to Date object
+ * @param {string} dateStr - Date string like "June 17, 2026"
+ * @returns {Date}
+ */
+function parseDate(dateStr) {
+  return new Date(dateStr);
+}
+
+/**
+ * Schedule a reminder 45 minutes before appointment
+ * @param {string} date - The appointment date
+ * @param {string} time - The appointment time
+ * @param {string} name - Customer name
+ */
+function scheduleReminder(date, time, name) {
+  requestNotificationPermission();
+  
+  const appointmentDate = parseDate(date);
+  const timeObj = parseTime(time);
+  
+  if (!timeObj) {
+    console.error('Could not parse time:', time);
+    return;
+  }
+  
+  // Set appointment time
+  appointmentDate.setHours(timeObj.hours);
+  appointmentDate.setMinutes(timeObj.minutes);
+  appointmentDate.setSeconds(0);
+  
+  // Calculate reminder time (45 minutes before)
+  const reminderTime = new Date(appointmentDate.getTime() - 45 * 60 * 1000);
+  
+  // Store reminder in localStorage
+  const reminders = JSON.parse(localStorage.getItem('reminders') || '[]');
+  reminders.push({
+    date: date,
+    time: time,
+    name: name,
+    appointmentTime: appointmentDate.toISOString(),
+    reminderTime: reminderTime.toISOString(),
+    notified: false
+  });
+  localStorage.setItem('reminders', JSON.stringify(reminders));
+  
+  console.log(`Reminder scheduled for ${date} at ${time} (${name}) - reminder at ${reminderTime}`);
+  
+  // Set up a check for this reminder
+  checkAndNotify(reminders.length - 1);
+}
+
+/**
+ * Schedule all reminders from bookings
+ */
+function scheduleAllReminders() {
+  for (const date in availableDays) {
+    const dayData = availableDays[date];
+    if (dayData.booked && typeof dayData.booked === 'object') {
+      for (const [time, name] of Object.entries(dayData.booked)) {
+        const reminders = JSON.parse(localStorage.getItem('reminders') || '[]');
+        const exists = reminders.some(r => r.date === date && r.time === time && r.name === name);
+        if (!exists) {
+          scheduleReminder(date, time, name);
+        }
+      }
+    }
+  }
+}
+
+/**
+ * Check if it's time to notify and schedule next check
+ * @param {number} reminderIndex - Index of reminder to check
+ */
+function checkAndNotify(reminderIndex) {
+  const reminders = JSON.parse(localStorage.getItem('reminders') || '[]');
+  const reminder = reminders[reminderIndex];
+  
+  if (!reminder || reminder.notified) return;
+  
+  const now = new Date();
+  const reminderTime = new Date(reminder.reminderTime);
+  const timeUntilReminder = reminderTime.getTime() - now.getTime();
+  
+  if (timeUntilReminder <= 0) {
+    // Time to notify!
+    sendNotification(reminder);
+    reminder.notified = true;
+    reminders[reminderIndex] = reminder;
+    localStorage.setItem('reminders', JSON.stringify(reminders));
+  } else {
+    // Schedule next check (check every minute, or right before time)
+    const delayMs = Math.min(timeUntilReminder, 60000);
+    setTimeout(() => checkAndNotify(reminderIndex), delayMs);
+  }
+}
+
+/**
+ * Send notification to user
+ * @param {object} reminder - Reminder object
+ */
+function sendNotification(reminder) {
+  const message = `Reminder: You have an appointment at ${reminder.time}`;
+  
+  // Try browser notification first
+  if ('Notification' in window && Notification.permission === 'granted') {
+    new Notification('MFades Haircut Reminder', {
+      body: message,
+      icon: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="30" r="20" fill="%23333"/><path d="M30 55 Q30 50 50 50 Q70 50 70 55 L70 85 Q70 90 65 90 L35 90 Q30 90 30 85 Z" fill="%23333"/></svg>',
+      tag: `appointment-${reminder.date}-${reminder.time}`,
+      requireInteraction: true
+    });
+  }
+  
+  // Also show in-page notification
+  showInPageNotification(reminder);
+}
+
+/**
+ * Show in-page notification modal
+ * @param {object} reminder - Reminder object
+ */
+function showInPageNotification(reminder) {
+  const overlay = document.createElement('div');
+  overlay.className = 'notification-overlay';
+  overlay.id = `notification-${reminder.date}-${reminder.time}`;
+  
+  const notificationBox = document.createElement('div');
+  notificationBox.className = 'notification-box';
+  
+  const closeBtn = document.createElement('button');
+  closeBtn.textContent = '✕';
+  closeBtn.className = 'notification-close';
+  closeBtn.addEventListener('click', () => overlay.remove());
+  
+  const title = document.createElement('h2');
+  title.textContent = '⏰ Appointment Reminder';
+  title.className = 'notification-title';
+  
+  const message = document.createElement('p');
+  message.textContent = `Your haircut appointment is in 45 minutes at ${reminder.time}`;
+  message.className = 'notification-message';
+  
+  const address = document.createElement('p');
+  address.textContent = BOOKING_INFO.address;
+  address.className = 'notification-address';
+  
+  const okBtn = document.createElement('button');
+  okBtn.textContent = 'Got it!';
+  okBtn.className = 'notification-btn';
+  okBtn.addEventListener('click', () => overlay.remove());
+  
+  notificationBox.appendChild(closeBtn);
+  notificationBox.appendChild(title);
+  notificationBox.appendChild(message);
+  notificationBox.appendChild(address);
+  notificationBox.appendChild(okBtn);
+  
+  overlay.appendChild(notificationBox);
+  document.body.appendChild(overlay);
 }
 
 /**
@@ -197,6 +393,9 @@ function submitBooking(date, time, name) {
     
     // Save to localStorage
     saveBookingsToStorage();
+    
+    // Schedule reminder for this appointment
+    scheduleReminder(date, time, name);
     
     console.log('Booking submitted successfully:', { date, time, name });
     
