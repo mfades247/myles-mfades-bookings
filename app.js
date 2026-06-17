@@ -11,8 +11,7 @@ const availableDays = {
       "3:30 PM",
       "4:00 PM",
       "4:30 PM",
-      "5:00 PM",
-   
+      "5:00 PM"
     ],
     booked: [
       "10:30 AM",
@@ -26,50 +25,37 @@ const bookingSection = document.getElementById("bookingSection");
 const selectedDate = document.getElementById("selectedDate");
 const timeSlots = document.getElementById("timeSlots");
 
-dateCards.innerHTML = "";
+// Create clickable date cards
+for (const date in availableDays) {
 
-Object.keys(availableDays).forEach(date => {
-  const card = document.createElement("div");
+  const card = document.createElement("button");
 
+  card.innerText = date;
   card.className = "date-card";
-  card.textContent = date;
 
-  card.addEventListener("click", () => {
+  card.onclick = function () {
 
     bookingSection.style.display = "block";
-    selectedDate.textContent = date;
+    selectedDate.innerText = date;
+
     timeSlots.innerHTML = "";
 
-    // Show booked times first
     availableDays[date].booked.forEach(time => {
-      const slot = document.createElement("div");
-
-      slot.className = "slot booked";
-      slot.textContent = `${time} - Booked`;
-
-      timeSlots.appendChild(slot);
+      const div = document.createElement("div");
+      div.className = "slot booked";
+      div.innerText = `${time} - Booked`;
+      timeSlots.appendChild(div);
     });
 
-    // Show available times
     availableDays[date].available.forEach(time => {
-      const slot = document.createElement("div");
-
-      slot.className = "slot";
-      slot.textContent = `${time} - Available`;
-
-      slot.addEventListener("click", () => {
-        document
-          .querySelectorAll(".slot")
-          .forEach(s => s.classList.remove("selected"));
-
-        slot.classList.add("selected");
-      });
-
-      timeSlots.appendChild(slot);
+      const div = document.createElement("div");
+      div.className = "slot";
+      div.innerText = `${time} - Available`;
+      timeSlots.appendChild(div);
     });
 
-  });
+  };
 
   dateCards.appendChild(card);
-});
+}
 ```
