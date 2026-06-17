@@ -1,0 +1,52 @@
+body{
+margin:0;
+font-family:Arial,sans-serif;
+background:#111;
+color:white;
+}
+
+.header{
+text-align:center;
+padding:30px;
+background:black;
+border-bottom:3px solid gold;
+}
+
+.header h1{
+color:gold;
+margin:0;
+}
+
+.container{
+max-width:900px;
+margin:auto;
+padding:20px;
+}
+
+.date-cards{
+display:grid;
+grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
+gap:15px;
+}
+
+.date-card{
+background:#1e1e1e;
+border:2px solid gold;
+color:white;
+padding:20px;
+border-radius:12px;
+cursor:pointer;
+text-align:center;
+}
+
+.slot{
+background:#222;
+margin:10px 0;
+padding:12px;
+border-radius:8px;
+}
+
+.booked{
+background:#444;
+color:#aaa;
+}
