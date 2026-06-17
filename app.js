@@ -15,7 +15,7 @@ const SELECTORS = {
 };
 
 // Admin credentials (you should change this to your actual password)
-const ADMIN_PASSWORD = "mfades";
+const ADMIN_PASSWORD = "DaiseyG2430!";
 let isAdmin = false;
 
 // Booking location info
