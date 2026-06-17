@@ -14,6 +14,10 @@ const SELECTORS = {
   timeSlots: "#timeSlots"
 };
 
+// Admin credentials (you should change this to your actual password)
+const ADMIN_PASSWORD = "mfades";
+let isAdmin = false;
+
 // Booking location info
 const BOOKING_INFO = {
   address: "2602 Marble Rd, Normal IL 61761",
@@ -24,13 +28,15 @@ const BOOKING_INFO = {
 const bookingState = {
   selectedDate: null,
   selectedTime: null,
+  customerName: null,
 
   /**
    * Set the current booking selection
    * @param {string} date - Selected date
    * @param {string} time - Selected time
+   * @param {string} name - Customer name
    */
-  setSelection(date, time) {
+  setSelection(date, time, name) {
     if (typeof date !== 'string' || date.trim() === '') {
       console.error('Invalid date provided');
       return false;
@@ -39,8 +45,13 @@ const bookingState = {
       console.error('Invalid time provided');
       return false;
     }
+    if (typeof name !== 'string' || name.trim() === '') {
+      console.error('Invalid name provided');
+      return false;
+    }
     this.selectedDate = date;
     this.selectedTime = time;
+    this.customerName = name;
     return true;
   },
 
@@ -50,17 +61,21 @@ const bookingState = {
   clear() {
     this.selectedDate = null;
     this.selectedTime = null;
+    this.customerName = null;
   }
 };
 
-// Booking data
+// Booking data with customer names
 const availableDays = {
   "June 17, 2026": {
     available: [
       "12:30 PM", "1:00 PM", "1:30 PM", "2:00 PM", "2:30 PM",
       "3:00 PM", "3:30 PM", "4:00 PM", "4:30 PM", "5:00 PM"
     ],
-    booked: ["10:30 AM", "11:00 AM"]
+    booked: {
+      "10:30 AM": "John Smith",
+      "11:00 AM": "Sarah Johnson"
+    }
   }
 };
 
@@ -85,15 +100,39 @@ const domElements = {
 };
 
 /**
+ * Check if user is admin
+ */
+function checkAdminAccess() {
+  const password = prompt("Enter admin password to view customer names:");
+  if (password === ADMIN_PASSWORD) {
+    isAdmin = true;
+    alert("Admin access granted!");
+  } else if (password !== null) {
+    alert("Invalid password");
+  }
+}
+
+/**
  * Create a time slot element
  * @param {string} time - Time string
  * @param {boolean} isBooked - Whether the slot is booked
+ * @param {string} customerName - Name of customer (if booked)
  * @returns {HTMLElement}
  */
-function createTimeSlot(time, isBooked) {
+function createTimeSlot(time, isBooked, customerName) {
   const slot = document.createElement("div");
   slot.className = `${CSS_CLASSES.slot} ${isBooked ? CSS_CLASSES.slotBooked : CSS_CLASSES.slotAvailable}`;
-  slot.textContent = `${time} - ${isBooked ? "Booked" : "Available"}`;
+  
+  if (isBooked) {
+    // Show customer name only if admin
+    if (isAdmin && customerName) {
+      slot.textContent = `${time} - Booked (${customerName})`;
+    } else {
+      slot.textContent = `${time} - Booked`;
+    }
+  } else {
+    slot.textContent = `${time} - Available`;
+  }
   
   if (!isBooked) {
     slot.style.cursor = "pointer";
@@ -107,13 +146,14 @@ function createTimeSlot(time, isBooked) {
  * Submit booking to server
  * @param {string} date - The selected date
  * @param {string} time - The selected time
+ * @param {string} name - Customer name
  */
-async function submitBooking(date, time) {
+async function submitBooking(date, time, name) {
   try {
     const response = await fetch('/api/bookings', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ date, time })
+      body: JSON.stringify({ date, time, name })
     });
     
     if (!response.ok) {
@@ -122,6 +162,13 @@ async function submitBooking(date, time) {
 
     const result = await response.json();
     console.log('Booking submitted successfully:', result);
+    
+    // Update local data
+    if (!Array.isArray(availableDays[date].booked)) {
+      availableDays[date].booked = {};
+    }
+    availableDays[date].booked[time] = name;
+    availableDays[date].available = availableDays[date].available.filter(t => t !== time);
     
     // Show booking confirmation with location info
     showBookingConfirmation(date, time);
@@ -200,16 +247,15 @@ function handleSlotClick(time, slotElement) {
   
   // Update booking state
   const selectedDate = domElements.selectedDate.textContent;
-  bookingState.setSelection(selectedDate, time);
   
   console.log(`Selected time: ${time} on ${selectedDate}`);
   
-  // Show confirmation message
+  // Show confirmation message with name input
   showConfirmationMessage(selectedDate, time);
 }
 
 /**
- * Show a confirmation message with confirm button
+ * Show a confirmation message with name input and confirm button
  * @param {string} date - The selected date
  * @param {string} time - The selected time
  */
@@ -233,11 +279,37 @@ function showConfirmationMessage(date, time) {
   const message = document.createElement('p');
   message.textContent = `Ready to confirm booking for ${date} at ${time}?`;
 
+  // Create name input
+  const nameLabel = document.createElement('label');
+  nameLabel.textContent = 'Your Name: ';
+  nameLabel.style.display = 'block';
+  nameLabel.style.marginTop = '15px';
+  nameLabel.style.marginBottom = '10px';
+  nameLabel.style.fontWeight = 'bold';
+
+  const nameInput = document.createElement('input');
+  nameInput.type = 'text';
+  nameInput.placeholder = 'Enter your full name';
+  nameInput.id = 'customerName';
+  nameInput.style.width = '100%';
+  nameInput.style.padding = '10px';
+  nameInput.style.marginBottom = '15px';
+  nameInput.style.borderRadius = '4px';
+  nameInput.style.border = '1px solid #ccc';
+  nameInput.style.boxSizing = 'border-box';
+
   const confirmBtn = document.createElement('button');
   confirmBtn.textContent = 'Confirm Booking';
   confirmBtn.addEventListener('click', () => {
-    submitBooking(date, time);
-    messageContainer.remove();
+    const customerName = nameInput.value.trim();
+    if (!customerName) {
+      alert('Please enter your name');
+      return;
+    }
+    if (bookingState.setSelection(date, time, customerName)) {
+      submitBooking(date, time, customerName);
+      messageContainer.remove();
+    }
   });
 
   const cancelBtn = document.createElement('button');
@@ -252,9 +324,14 @@ function showConfirmationMessage(date, time) {
   });
 
   messageContainer.appendChild(message);
+  messageContainer.appendChild(nameLabel);
+  messageContainer.appendChild(nameInput);
   messageContainer.appendChild(confirmBtn);
   messageContainer.appendChild(cancelBtn);
   domElements.timeSlots.parentElement.appendChild(messageContainer);
+
+  // Focus on name input
+  nameInput.focus();
 }
 
 /**
@@ -280,10 +357,13 @@ function populateTimeSlots(date) {
   domElements.selectedDate.textContent = date;
 
   // Show booked slots first (disabled)
-  if (dayData.booked && dayData.booked.length > 0) {
-    dayData.booked.forEach(time => {
-      domElements.timeSlots.appendChild(createTimeSlot(time, true));
-    });
+  if (dayData.booked) {
+    if (typeof dayData.booked === 'object' && !Array.isArray(dayData.booked)) {
+      // New format: object with times as keys and names as values
+      for (const [time, name] of Object.entries(dayData.booked)) {
+        domElements.timeSlots.appendChild(createTimeSlot(time, true, name));
+      }
+    }
   }
 
   // Then available slots (clickable)
@@ -341,6 +421,17 @@ function init() {
         createDateCard(date);
       }
     }
+
+    // Add admin button
+    const adminBtn = document.createElement('button');
+    adminBtn.textContent = 'Admin Panel';
+    adminBtn.id = 'adminBtn';
+    adminBtn.style.position = 'fixed';
+    adminBtn.style.bottom = '20px';
+    adminBtn.style.right = '20px';
+    adminBtn.style.zIndex = '1000';
+    adminBtn.addEventListener('click', checkAdminAccess);
+    document.body.appendChild(adminBtn);
   } catch (error) {
     console.error('Error initializing booking system:', error);
     alert('Failed to initialize booking system. Please refresh the page.');
