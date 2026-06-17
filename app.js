@@ -66,7 +66,7 @@ const bookingState = {
 };
 
 // Booking data with customer names
-const availableDays = {
+let availableDays = {
   "June 17, 2026": {
     available: [
       "12:30 PM", "1:00 PM", "1:30 PM", "2:00 PM", "2:30 PM",
@@ -98,6 +98,38 @@ const domElements = {
     }
   }
 };
+
+/**
+ * Load bookings from localStorage
+ */
+function loadBookingsFromStorage() {
+  const stored = localStorage.getItem('bookings');
+  if (stored) {
+    try {
+      const bookings = JSON.parse(stored);
+      // Merge stored bookings with availableDays
+      for (const date in bookings) {
+        if (availableDays[date]) {
+          availableDays[date].booked = { ...availableDays[date].booked, ...bookings[date].booked };
+          availableDays[date].available = availableDays[date].available.filter(t => !bookings[date].booked[t]);
+        }
+      }
+    } catch (error) {
+      console.error('Error loading bookings from storage:', error);
+    }
+  }
+}
+
+/**
+ * Save bookings to localStorage
+ */
+function saveBookingsToStorage() {
+  const bookingsToSave = {};
+  for (const date in availableDays) {
+    bookingsToSave[date] = { booked: availableDays[date].booked };
+  }
+  localStorage.setItem('bookings', JSON.stringify(bookingsToSave));
+}
 
 /**
  * Check if user is admin
@@ -143,32 +175,30 @@ function createTimeSlot(time, isBooked, customerName) {
 }
 
 /**
- * Submit booking to server
+ * Submit booking to localStorage
  * @param {string} date - The selected date
  * @param {string} time - The selected time
  * @param {string} name - Customer name
  */
-async function submitBooking(date, time, name) {
+function submitBooking(date, time, name) {
   try {
-    const response = await fetch('/api/bookings', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ date, time, name })
-    });
-    
-    if (!response.ok) {
-      throw new Error(`Booking failed: ${response.statusText}`);
-    }
-
-    const result = await response.json();
-    console.log('Booking submitted successfully:', result);
-    
     // Update local data
-    if (!Array.isArray(availableDays[date].booked)) {
+    if (!availableDays[date]) {
+      availableDays[date] = { available: [], booked: {} };
+    }
+    
+    if (typeof availableDays[date].booked !== 'object' || Array.isArray(availableDays[date].booked)) {
       availableDays[date].booked = {};
     }
+    
+    // Add booking
     availableDays[date].booked[time] = name;
     availableDays[date].available = availableDays[date].available.filter(t => t !== time);
+    
+    // Save to localStorage
+    saveBookingsToStorage();
+    
+    console.log('Booking submitted successfully:', { date, time, name });
     
     // Show booking confirmation with location info
     showBookingConfirmation(date, time);
@@ -408,6 +438,9 @@ function createDateCard(date) {
 function init() {
   try {
     domElements.init();
+    
+    // Load bookings from localStorage
+    loadBookingsFromStorage();
     
     // Validate availableDays exists and is not empty
     if (!availableDays || Object.keys(availableDays).length === 0) {
