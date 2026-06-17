@@ -374,10 +374,19 @@ function createTimeSlot(time, isBooked, customerName) {
  * Submit booking to localStorage
  * @param {string} date - The selected date
  * @param {string} time - The selected time
- * @param {string} name - Customer name
+ * @param {string} firstName - Customer first name
+ * @param {string} lastName - Customer last name
  */
-function submitBooking(date, time, name) {
+function submitBooking(date, time, firstName, lastName) {
   try {
+    const fullName = `${firstName.trim()} ${lastName.trim()}`.trim();
+    
+    // Validate name
+    if (!fullName || fullName.length < 2) {
+      alert('Please enter both first and last name');
+      return;
+    }
+    
     // Update local data
     if (!availableDays[date]) {
       availableDays[date] = { available: [], booked: {} };
@@ -388,16 +397,16 @@ function submitBooking(date, time, name) {
     }
     
     // Add booking
-    availableDays[date].booked[time] = name;
+    availableDays[date].booked[time] = fullName;
     availableDays[date].available = availableDays[date].available.filter(t => t !== time);
     
     // Save to localStorage
     saveBookingsToStorage();
     
     // Schedule reminder for this appointment
-    scheduleReminder(date, time, name);
+    scheduleReminder(date, time, fullName);
     
-    console.log('Booking submitted successfully:', { date, time, name });
+    console.log('Booking submitted successfully:', { date, time, name: fullName });
     
     // Show booking confirmation with location info
     showBookingConfirmation(date, time);
@@ -508,35 +517,48 @@ function showConfirmationMessage(date, time) {
   const message = document.createElement('p');
   message.textContent = `Ready to confirm booking for ${date} at ${time}?`;
 
-  // Create name input
-  const nameLabel = document.createElement('label');
-  nameLabel.textContent = 'Your Name: ';
-  nameLabel.style.display = 'block';
-  nameLabel.style.marginTop = '15px';
-  nameLabel.style.marginBottom = '10px';
-  nameLabel.style.fontWeight = 'bold';
+  // Create first name input
+  const firstNameLabel = document.createElement('label');
+  firstNameLabel.textContent = 'First Name:';
+  firstNameLabel.style.marginTop = '15px';
 
-  const nameInput = document.createElement('input');
-  nameInput.type = 'text';
-  nameInput.placeholder = 'Enter your full name';
-  nameInput.id = 'customerName';
-  nameInput.style.width = '100%';
-  nameInput.style.padding = '10px';
-  nameInput.style.marginBottom = '15px';
-  nameInput.style.borderRadius = '4px';
-  nameInput.style.border = '1px solid #ccc';
-  nameInput.style.boxSizing = 'border-box';
+  const firstNameInput = document.createElement('input');
+  firstNameInput.type = 'text';
+  firstNameInput.placeholder = 'Enter your first name';
+  firstNameInput.id = 'customerFirstName';
+  firstNameInput.style.marginBottom = '10px';
+
+  // Create last name input
+  const lastNameLabel = document.createElement('label');
+  lastNameLabel.textContent = 'Last Name:';
+  lastNameLabel.style.marginTop = '15px';
+
+  const lastNameInput = document.createElement('input');
+  lastNameInput.type = 'text';
+  lastNameInput.placeholder = 'Enter your last name';
+  lastNameInput.id = 'customerLastName';
+  lastNameInput.style.marginBottom = '15px';
 
   const confirmBtn = document.createElement('button');
   confirmBtn.textContent = 'Confirm Booking';
   confirmBtn.addEventListener('click', () => {
-    const customerName = nameInput.value.trim();
-    if (!customerName) {
-      alert('Please enter your name');
+    const firstName = firstNameInput.value.trim();
+    const lastName = lastNameInput.value.trim();
+    
+    if (!firstName) {
+      alert('Please enter your first name');
+      firstNameInput.focus();
       return;
     }
-    if (bookingState.setSelection(date, time, customerName)) {
-      submitBooking(date, time, customerName);
+    if (!lastName) {
+      alert('Please enter your last name');
+      lastNameInput.focus();
+      return;
+    }
+    
+    const fullName = `${firstName} ${lastName}`;
+    if (bookingState.setSelection(date, time, fullName)) {
+      submitBooking(date, time, firstName, lastName);
       messageContainer.remove();
     }
   });
@@ -553,14 +575,16 @@ function showConfirmationMessage(date, time) {
   });
 
   messageContainer.appendChild(message);
-  messageContainer.appendChild(nameLabel);
-  messageContainer.appendChild(nameInput);
+  messageContainer.appendChild(firstNameLabel);
+  messageContainer.appendChild(firstNameInput);
+  messageContainer.appendChild(lastNameLabel);
+  messageContainer.appendChild(lastNameInput);
   messageContainer.appendChild(confirmBtn);
   messageContainer.appendChild(cancelBtn);
   domElements.timeSlots.parentElement.appendChild(messageContainer);
 
-  // Focus on name input
-  nameInput.focus();
+  // Focus on first name input
+  firstNameInput.focus();
 }
 
 /**
