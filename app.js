@@ -14,6 +14,12 @@ const SELECTORS = {
   timeSlots: "#timeSlots"
 };
 
+// Booking location info
+const BOOKING_INFO = {
+  address: "2602 Marble Rd, Normal IL 61761",
+  directions: "When you are here walk in 7 steps and it is on your left and go down the stairs"
+};
+
 // Booking state management
 const bookingState = {
   selectedDate: null,
@@ -116,12 +122,60 @@ async function submitBooking(date, time) {
 
     const result = await response.json();
     console.log('Booking submitted successfully:', result);
-    alert(`Booking confirmed for ${date} at ${time}`);
+    
+    // Show booking confirmation with location info
+    showBookingConfirmation(date, time);
     bookingState.clear();
   } catch (error) {
     console.error('Error submitting booking:', error);
     alert('Failed to book appointment. Please try again.');
   }
+}
+
+/**
+ * Show booking confirmation with location information
+ * @param {string} date - The booked date
+ * @param {string} time - The booked time
+ */
+function showBookingConfirmation(date, time) {
+  // Remove any existing confirmation message
+  const existingMessage = document.getElementById('confirmationMessage');
+  if (existingMessage) {
+    existingMessage.remove();
+  }
+
+  // Remove any existing booking info
+  const existingInfo = document.getElementById('bookingInfo');
+  if (existingInfo) {
+    existingInfo.remove();
+  }
+
+  // Create confirmation container
+  const messageContainer = document.createElement('div');
+  messageContainer.id = 'confirmationMessage';
+
+  const message = document.createElement('p');
+  message.textContent = `✓ Booking confirmed for ${date} at ${time}`;
+
+  messageContainer.appendChild(message);
+  domElements.timeSlots.parentElement.appendChild(messageContainer);
+
+  // Create booking info container
+  const infoContainer = document.createElement('div');
+  infoContainer.id = 'bookingInfo';
+
+  const addressPara = document.createElement('p');
+  addressPara.textContent = BOOKING_INFO.address;
+  addressPara.style.fontWeight = 'bold';
+  addressPara.style.fontSize = '1.1em';
+
+  const directionsPara = document.createElement('p');
+  directionsPara.textContent = BOOKING_INFO.directions;
+  directionsPara.style.marginTop = '15px';
+
+  infoContainer.appendChild(addressPara);
+  infoContainer.appendChild(directionsPara);
+  domElements.timeSlots.parentElement.appendChild(infoContainer);
 }
 
 /**
@@ -166,18 +220,21 @@ function showConfirmationMessage(date, time) {
     existingMessage.remove();
   }
 
+  // Remove any existing booking info
+  const existingInfo = document.getElementById('bookingInfo');
+  if (existingInfo) {
+    existingInfo.remove();
+  }
+
   // Create confirmation container
   const messageContainer = document.createElement('div');
   messageContainer.id = 'confirmationMessage';
-  messageContainer.style.cssText = 'margin-top: 20px; padding: 15px; background-color: #f0f8ff; border: 2px solid #4CAF50; border-radius: 5px;';
 
   const message = document.createElement('p');
   message.textContent = `Ready to confirm booking for ${date} at ${time}?`;
-  message.style.margin = '0 0 10px 0';
 
   const confirmBtn = document.createElement('button');
   confirmBtn.textContent = 'Confirm Booking';
-  confirmBtn.style.cssText = 'background-color: #4CAF50; color: white; padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer; margin-right: 10px;';
   confirmBtn.addEventListener('click', () => {
     submitBooking(date, time);
     messageContainer.remove();
@@ -185,7 +242,7 @@ function showConfirmationMessage(date, time) {
 
   const cancelBtn = document.createElement('button');
   cancelBtn.textContent = 'Cancel';
-  cancelBtn.style.cssText = 'background-color: #f44336; color: white; padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer;';
+  cancelBtn.className = 'cancel-btn';
   cancelBtn.addEventListener('click', () => {
     messageContainer.remove();
     bookingState.clear();
