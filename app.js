@@ -12,8 +12,7 @@ const availableDays = {
       "4:00 PM",
       "4:30 PM",
       "5:00 PM",
-      "5:30 PM",
-      "6:00 PM"
+   
     ],
     booked: [
       "10:30 AM",
