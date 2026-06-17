@@ -47,7 +47,7 @@ const bookingState = {
   }
 };
 
-// Booking data with expanded dates
+// Booking data
 const availableDays = {
   "June 17, 2026": {
     available: [
@@ -55,27 +55,6 @@ const availableDays = {
       "3:00 PM", "3:30 PM", "4:00 PM", "4:30 PM", "5:00 PM"
     ],
     booked: ["10:30 AM", "11:00 AM"]
-  },
-  "June 18, 2026": {
-    available: [
-      "9:00 AM", "9:30 AM", "10:00 AM", "10:30 AM", "11:00 AM",
-      "11:30 AM", "2:00 PM", "2:30 PM", "3:00 PM", "3:30 PM"
-    ],
-    booked: ["1:00 PM", "1:30 PM"]
-  },
-  "June 19, 2026": {
-    available: [
-      "10:00 AM", "10:30 AM", "11:00 AM", "11:30 AM", "12:00 PM",
-      "12:30 PM", "3:00 PM", "3:30 PM", "4:00 PM", "4:30 PM"
-    ],
-    booked: ["2:00 PM"]
-  },
-  "June 20, 2026": {
-    available: [
-      "1:00 PM", "1:30 PM", "2:00 PM", "2:30 PM", "3:00 PM",
-      "3:30 PM", "4:00 PM", "4:30 PM", "5:00 PM"
-    ],
-    booked: ["10:00 AM", "10:30 AM", "11:00 AM"]
   }
 };
 
