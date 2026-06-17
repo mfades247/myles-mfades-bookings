@@ -1,3 +1,6 @@
+```javascript
+alert("app.js loaded");
+```
 const availableDays = {
 "June 17, 2026": {
 available: [
