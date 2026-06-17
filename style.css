@@ -1,0 +1,33 @@
+```css
+body {
+  background: #111;
+  color: white;
+  font-family: Arial, sans-serif;
+  padding: 20px;
+}
+
+h1 {
+  color: gold;
+}
+
+.date-card {
+  background: #222;
+  border: 2px solid gold;
+  padding: 15px;
+  margin: 10px 0;
+  cursor: pointer;
+  border-radius: 10px;
+}
+
+.slot {
+  background: #222;
+  padding: 10px;
+  margin: 5px 0;
+  border-radius: 8px;
+}
+
+.booked {
+  background: #444;
+  color: #aaa;
+}
+```
